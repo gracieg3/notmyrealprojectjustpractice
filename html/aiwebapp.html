@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space Shooter</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: black;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+      border: none;
+      background-color: #555;
+      color: white;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    button:hover {
+      background-color: #777;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <button id="restartButton" style="display: none;">Restart Game</button>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const restartButton = document.getElementById('restartButton');
+
+    // Game variables
+    let player, bullets, enemies, isGameOver, score, level, enemySpeed, shootSound, explosionSound;
+
+    function initGame() {
+      player = { x: 375, y: 550, width: 50, height: 20 };
+      bullets = [];
+      enemies = [];
+      isGameOver = false;
+      score = 0;
+      level = 1;
+      enemySpeed = 2;
+
+      // Hide restart button
+      restartButton.style.display = 'none';
+
+      // Preload sound effects
+      shootSound = new Audio('https://freesound.org/data/previews/66/66717_931655-lq.mp3'); // Laser sound
+      explosionSound = new Audio('https://freesound.org/data/previews/455/455089_8977430-lq.mp3'); // Explosion sound
+
+      gameLoop();
+    }
+
+    // Player controls
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'ArrowLeft') player.x -= 15;
+      if (e.code === 'ArrowRight') player.x += 15;
+      if (e.code === 'Space') shootBullet();
+    });
+
+    // Shooting bullets
+    function shootBullet() {
+      bullets.push({ x: player.x + player.width / 2, y: player.y, width: 5, height: 10 });
+      shootSound.currentTime = 0; // Reset sound playback
+      shootSound.play();
+    }
+
+    // Spawn enemies
+    function spawnEnemies() {
+      if (Math.random() < 0.05) {
+        enemies.push({ x: Math.random() * 750, y: 0, width: 40, height: 40 });
+      }
+    }
+
+    // Update game state
+    function updateGame() {
+      if (isGameOver) return;
+
+      // Move bullets
+      bullets.forEach((bullet, index) => {
+        bullet.y -= 5;
+        if (bullet.y < 0) bullets.splice(index, 1);
+      });
+
+      // Move enemies
+      enemies.forEach((enemy, index) => {
+        enemy.y += enemySpeed;
+        if (enemy.y > canvas.height) enemies.splice(index, 1);
+      });
+
+      // Check collisions
+      bullets.forEach((bullet, bIndex) => {
+        enemies.forEach((enemy, eIndex) => {
+          if (
+            bullet.x < enemy.x + enemy.width &&
+            bullet.x + bullet.width > enemy.x &&
+            bullet.y < enemy.y + enemy.height &&
+            bullet.y + bullet.height > enemy.y
+          ) {
+            bullets.splice(bIndex, 1);
+            enemies.splice(eIndex, 1);
+            explosionSound.currentTime = 0; // Reset sound playback
+            explosionSound.play();
+            score += 10;
+
+            // Level up every 100 points
+            if (score % 100 === 0) {
+              level++;
+              enemySpeed += 0.5; // Increase enemy speed with levels
+            }
+          }
+        });
+      });
+
+      // Check for game over
+      enemies.forEach((enemy) => {
+        if (
+          enemy.x < player.x + player.width &&
+          enemy.x + enemy.width > player.x &&
+          enemy.y < player.y + player.height &&
+          enemy.y + enemy.height > player.y
+        ) {
+          isGameOver = true;
+        }
+      });
+    }
+
+    // Draw game
+    function drawGame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw player
+      ctx.fillStyle = 'white';
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+
+      // Draw bullets
+      bullets.forEach((bullet) => {
+        ctx.fillStyle = 'yellow';
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+      });
+
+      // Draw enemies
+      enemies.forEach((enemy) => {
+        ctx.fillStyle = 'red';
+        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+      });
+
+      // Draw score and level
+      ctx.fillStyle = 'white';
+      ctx.font = '20px Arial';
+      ctx.fillText(`Score: ${score}`, 10, 20);
+      ctx.fillText(`Level: ${level}`, 700, 20);
+
+      if (isGameOver) {
+        ctx.fillStyle = 'red';
+        ctx.font = '40px Arial';
+        ctx.fillText('Game Over', canvas.width / 2 - 100, canvas.height / 2);
+        restartButton.style.display = 'block';
+      }
+    }
+
+    // Game loop
+    function gameLoop() {
+      updateGame();
+      drawGame();
+      spawnEnemies();
+      if (!isGameOver) requestAnimationFrame(gameLoop);
+    }
+
+    // Restart game
+    restartButton.addEventListener('click', () => {
+      initGame();
+    });
+
+    // Start the game
+    initGame();
+  </script>
+</body>
+</html>
+
